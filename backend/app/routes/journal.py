@@ -14,6 +14,10 @@ from ..db.crud import (
 # Import updated models
 from ..models.entry import JournalEntryCreate, JournalEntry, JournalEntryUpdate
 
+# Import the AI processing function
+from .agent import process_entry_with_ai
+
+
 router = APIRouter(
     prefix="/journal",
     tags=["journal"],
@@ -25,16 +29,37 @@ router = APIRouter(
 
 @router.post("/entries/", response_model=JournalEntry)
 def create_entry(entry: JournalEntryCreate, db: Session = Depends(get_db)):
-    """Create a new journal entry"""
-    # create_journal_entry now expects and handles title and date
+    """Create a new journal entry and trigger AI processing."""
+    # Create the entry in the database
     db_entry = create_journal_entry(db, entry)
 
-    # Convert the activities and keywords from JSON strings to lists for the response
+    # Trigger AI processing for the newly created entry
+    # This call is asynchronous and doesn't block the response to the user
+    # You might want to consider a background task queue for more robust handling
+    # For simplicity, we'll call it directly here.
+    process_entry_with_ai(db, db_entry.id)
+
+    # Convert the SQLAlchemy model to the Pydantic model for the response
+    # Ensure keywords are parsed from JSON string back to list for the response
     result = JournalEntry.from_orm(db_entry)
-    if db_entry.activities:
-        result.activities = json.loads(db_entry.activities)
-    if db_entry.keywords:
-        result.keywords = json.loads(db_entry.keywords)
+    # Check if keywords exist and are a string before trying to load JSON
+    if db_entry.keywords and isinstance(db_entry.keywords, str):
+        try:
+            result.keywords = json.loads(db_entry.keywords)
+        except json.JSONDecodeError:
+            result.keywords = [] # Handle potential JSON decode errors
+    else:
+        result.keywords = [] # Ensure keywords is a list even if None or not string
+
+    # Handle activities if they exist
+    if db_entry.activities and isinstance(db_entry.activities, str):
+         try:
+             result.activities = json.loads(db_entry.activities)
+         except json.JSONDecodeError:
+             result.activities = []
+    else:
+         result.activities = []
+
 
     return result
 
@@ -42,21 +67,33 @@ def create_entry(entry: JournalEntryCreate, db: Session = Depends(get_db)):
 @router.get("/entries/", response_model=List[JournalEntry])
 def read_entries(
     skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=100),
+    limit: int = Query(100, le=100),
     db: Session = Depends(get_db)
-):
-    """Get all journal entries with pagination"""
-    # get_journal_entries now orders by date and created_at
-    entries = get_journal_entries(db, skip=skip, limit=limit)
-
-    # Convert the activities and keywords from JSON strings to lists for each entry in the response
+) -> List[JournalEntry]:
+    """Retrieve all journal entries with pagination."""
+    db_entries = get_journal_entries(db, skip=skip, limit=limit)
+    # Convert SQLAlchemy models to Pydantic models and parse JSON fields
     results = []
-    for entry in entries:
-        result = JournalEntry.from_orm(entry)
-        if entry.activities:
-            result.activities = json.loads(entry.activities)
-        if entry.keywords:
-            result.keywords = json.loads(entry.keywords)
+    for db_entry in db_entries:
+        result = JournalEntry.from_orm(db_entry)
+        # Check if keywords exist and are a string before trying to load JSON
+        if db_entry.keywords and isinstance(db_entry.keywords, str):
+            try:
+                result.keywords = json.loads(db_entry.keywords)
+            except json.JSONDecodeError:
+                result.keywords = [] # Handle potential JSON decode errors
+        else:
+            result.keywords = [] # Ensure keywords is a list even if None or not string
+
+        # Handle activities if they exist
+        if db_entry.activities and isinstance(db_entry.activities, str):
+             try:
+                 result.activities = json.loads(db_entry.activities)
+             except json.JSONDecodeError:
+                 result.activities = []
+        else:
+             result.activities = []
+
         results.append(result)
 
     return results
@@ -64,17 +101,31 @@ def read_entries(
 
 @router.get("/entries/{entry_id}", response_model=JournalEntry)
 def read_entry(entry_id: int, db: Session = Depends(get_db)):
-    """Get a specific journal entry by ID"""
+    """Retrieve a specific journal entry by ID."""
     db_entry = get_journal_entry(db, entry_id)
     if db_entry is None:
         raise HTTPException(status_code=404, detail="Journal entry not found")
 
-    # Convert the activities and keywords from JSON strings to lists for the response
+    # Convert the SQLAlchemy model to the Pydantic model for the response
+    # Ensure keywords are parsed from JSON string back to list for the response
     result = JournalEntry.from_orm(db_entry)
-    if db_entry.activities:
-        result.activities = json.loads(db_entry.activities)
-    if db_entry.keywords:
-        result.keywords = json.loads(db_entry.keywords)
+    # Check if keywords exist and are a string before trying to load JSON
+    if db_entry.keywords and isinstance(db_entry.keywords, str):
+        try:
+            result.keywords = json.loads(db_entry.keywords)
+        except json.JSONDecodeError:
+            result.keywords = [] # Handle potential JSON decode errors
+    else:
+        result.keywords = [] # Ensure keywords is a list even if None or not string
+
+    # Handle activities if they exist
+    if db_entry.activities and isinstance(db_entry.activities, str):
+         try:
+             result.activities = json.loads(db_entry.activities)
+         except json.JSONDecodeError:
+             result.activities = []
+    else:
+        result.activities = []
 
     return result
 
@@ -85,25 +136,42 @@ def update_entry(
     entry_update: JournalEntryUpdate,
     db: Session = Depends(get_db)
 ):
-    """Update a journal entry"""
-    # update_journal_entry now expects and handles title and date
+    """Update a journal entry and trigger AI processing."""
+    # update_journal_entry now expects and handles all fields in JournalEntryUpdate
     db_entry = update_journal_entry(db, entry_id, entry_update)
     if db_entry is None:
         raise HTTPException(status_code=404, detail="Journal entry not found")
 
-    # Convert the activities and keywords from JSON strings to lists for the response
+    # Trigger AI processing for the updated entry
+    process_entry_with_ai(db, db_entry.id)
+
+    # Convert the SQLAlchemy model to the Pydantic model for the response
+    # Ensure keywords are parsed from JSON string back to list for the response
     result = JournalEntry.from_orm(db_entry)
-    if db_entry.activities:
-        result.activities = json.loads(db_entry.activities)
-    if db_entry.keywords:
-        result.keywords = json.loads(db_entry.keywords)
+    # Check if keywords exist and are a string before trying to load JSON
+    if db_entry.keywords and isinstance(db_entry.keywords, str):
+        try:
+            result.keywords = json.loads(db_entry.keywords)
+        except json.JSONDecodeError:
+            result.keywords = [] # Handle potential JSON decode errors
+    else:
+        result.keywords = [] # Ensure keywords is a list even if None or not string
+
+    # Handle activities if they exist
+    if db_entry.activities and isinstance(db_entry.activities, str):
+         try:
+             result.activities = json.loads(db_entry.activities)
+         except json.JSONDecodeError:
+             result.activities = []
+    else:
+        result.activities = []
 
     return result
 
 
 @router.delete("/entries/{entry_id}", response_model=bool)
 def delete_entry(entry_id: int, db: Session = Depends(get_db)):
-    """Delete a journal entry"""
+    """Delete a journal entry."""
     success = delete_journal_entry(db, entry_id)
     if not success:
         raise HTTPException(status_code=404, detail="Journal entry not found")

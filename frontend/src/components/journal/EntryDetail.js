@@ -1,7 +1,7 @@
-
 import React from 'react';
 // Import necessary icons, same as EntryCard
-import { X, Edit, Trash2, Smile, Frown, Moon, Sun, Zap, Feather, User, Users, Meh } from 'lucide-react';
+import { X, Edit, Trash2, Smile, Frown, Moon, Sun, Zap, Feather, User, Users, Meh, Tag } from 'lucide-react'; // Import Tag icon
+import ReactMarkdown from 'react-markdown'; // Import ReactMarkdown
 
 // Helper function to render state icons (copied from EntryCard for self-containment)
 const renderStateIcon = (type, value) => {
@@ -40,9 +40,6 @@ const EntryDetail = ({ entry, onClose, onEdit, onDelete }) => {
   }
 
   return (
-    // Overlay for the background (optional, depends on how you integrate it)
-    // If using a dedicated modal component in the parent, this overlay might be part of that.
-    // This structure assumes you are rendering this component conditionally in your main app/page component.
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex justify-center items-center p-4">
       {/* Modal content area */}
       <div className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:w-full md:max-w-xl lg:max-w-2xl p-6 max-h-[80vh] flex flex-col"> {/* Increased max-w to better match image proportions */}
@@ -100,11 +97,33 @@ const EntryDetail = ({ entry, onClose, onEdit, onDelete }) => {
              </div>
          ) : null}
 
+        {/* Keywords as Tags */}
+        {entry.keywords && entry.keywords.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-2 flex-shrink-0"> {/* Added flex-wrap and gap */}
+                <span className="text-sm font-medium text-gray-700 flex items-center">
+                    <Tag className="h-4 w-4 mr-1 text-gray-500" /> Keywords:
+                </span>
+                {entry.keywords.map((keyword, index) => (
+                    <span
+                        key={index}
+                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                    >
+                        {keyword}
+                    </span>
+                ))}
+            </div>
+        )}
+
 
         {/* Main Content - Scrollable Area */}
-        {/* Added flex-grow and overflow-y-auto here */}
+        {/* Use formatted_content if available, otherwise use original content */}
+        {/* Use ReactMarkdown to render markdown formatted content */}
         <div className="mt-4 text-gray-700 leading-relaxed overflow-y-auto flex-grow pr-2"> {/* Added pr-2 for scrollbar padding */}
-          <p className="whitespace-pre-wrap">{entry.content}</p> {/* Use whitespace-pre-wrap to respect line breaks */}
+           {entry.formatted_content ? (
+               <ReactMarkdown className="prose max-w-none">{entry.formatted_content}</ReactMarkdown> // Use ReactMarkdown for formatted content
+           ) : (
+               <p className="whitespace-pre-wrap">{entry.content}</p> 
+           )}
         </div>
 
         {/* Action Buttons (Edit/Delete) */}
@@ -119,7 +138,7 @@ const EntryDetail = ({ entry, onClose, onEdit, onDelete }) => {
             </button>
             <button
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                 onClick={() => onDelete(entry.id)}
+                 onClick={() => onDelete(entry.id)} // Corrected to pass entry.id
             >
                 <Trash2 className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
                 Delete

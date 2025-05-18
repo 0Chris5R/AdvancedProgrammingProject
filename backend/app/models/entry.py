@@ -1,6 +1,7 @@
 from datetime import datetime
-from typing import Optional
-from pydantic import BaseModel, Field
+from typing import Optional, List
+from pydantic import BaseModel, Field, field_validator
+import json
 from enum import Enum, IntEnum
 from datetime import date as date_type # Import date type with an alias
 
@@ -63,20 +64,36 @@ class JournalEntryUpdate(BaseModel):
     sleep_quality: Optional[SleepQuality] = None
     stress_level: Optional[StressLevel] = None
     social_engagement: Optional[SocialEngagement] = None
+    formatted_content: Optional[str] = None
+    keywords: Optional[List[str]] = None # Keywords will be a list of strings
 
 
 class JournalEntry(JournalEntryBase):
-    # JournalEntry includes all fields from base, plus backend-managed fields
     id: int
     created_at: datetime
     updated_at: Optional[datetime] = None
-
-    # AI-generated analysis fields
     formatted_content: Optional[str] = None
-    # Activities and keywords are lists in the Pydantic model
-    activities: Optional[list[str]] = None
+    activities: Optional[List[str]] = None # Define as List[str]
     sentiment_analysis: Optional[str] = None
-    keywords: Optional[list[str]] = None
+    keywords: Optional[List[str]] = None # Define as List[str]
 
     class Config:
-        from_attributes = True # Use from_attributes instead of orm_mode for Pydantic V2+
+        from_attributes = True # Pydantic V2 uses from_attributes
+
+    # Add this validator for 'keywords' and 'activities'
+    @field_validator('keywords', 'activities', mode='before')
+    @classmethod
+    def parse_json_fields(cls, value):
+        if isinstance(value, str): # If the value from DB is a string
+            try:
+                return json.loads(value) # Try to parse it as JSON
+            except json.JSONDecodeError:
+                # Decide how to handle malformed JSON:
+                # Option 1: Return empty list
+                return []
+                # Option 2: Return None (if field is Optional)
+                # return None
+                # Option 3: Raise a custom validation error or let Pydantic handle it
+                # raise ValueError("Invalid JSON string")
+        # If the value is already a list (e.g. not from DB or pre-processed) or None, return as is
+        return value

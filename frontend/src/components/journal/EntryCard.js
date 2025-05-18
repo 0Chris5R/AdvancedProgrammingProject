@@ -1,6 +1,6 @@
 import React from 'react';
-// Import necessary icons, including Meh
-import { Edit, Trash2, Smile, Frown, Moon, Sun, Zap, Feather, User, Users, Meh } from 'lucide-react';
+// Import necessary icons, including Meh and Tag
+import { Edit, Trash2, Smile, Frown, Moon, Sun, Zap, Feather, User, Users, Meh, Tag } from 'lucide-react';
 
 // Added onEdit, onDelete, and onSelect props
 const EntryCard = ({ entry, onEdit, onDelete, onSelect }) => {
@@ -79,6 +79,20 @@ const EntryCard = ({ entry, onEdit, onDelete, onSelect }) => {
                    )}
                </div>
            ) : null}
+
+           {/* Keywords as Tags */}
+           {entry.keywords && entry.keywords.length > 0 && (
+               <div className="mt-2 flex flex-wrap gap-1"> {/* Added flex-wrap and gap */}
+                   {entry.keywords.map((keyword, index) => (
+                       <span
+                           key={index}
+                           className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800" // Slightly smaller tags for card
+                       >
+                           {keyword}
+                       </span>
+                   ))}
+               </div>
+           )}
 
 
         </div>

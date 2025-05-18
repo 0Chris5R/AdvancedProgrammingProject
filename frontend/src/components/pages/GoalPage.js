@@ -4,7 +4,6 @@ import GoalForm from '../goals/GoalForm';
 import Modal from '../common/Modal'; 
 
 
-
 // Import API functions and react-query hooks
 import {
     fetchGoals,

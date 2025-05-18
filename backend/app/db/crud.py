@@ -62,21 +62,27 @@ def update_journal_entry(
     """Update a journal entry"""
     db_entry = get_journal_entry(db, entry_id)
     if db_entry:
-        # Use model_dump(exclude_unset=True) for Pydantic V2+
         update_data = entry_update.model_dump(exclude_unset=True)
 
-        # Update the entry with the new data
         for key, value in update_data.items():
-            # Explicitly use .value for IntEnum fields if they are being updated
+            if value is None and key not in ['formatted_content', 'keywords', 'activities', 'sentiment_analysis']: # Allow setting AI fields to None explicitly if desired
+                # Or simply 'if value is None:' if you always want to skip setting None for all fields during partial updates
+                # unless explicitly passed as None in the payload (exclude_unset handles this generally).
+                # This check is mostly if you want to avoid overwriting existing values with None for specific fields.
+                # For formatted_content and keywords, we want to allow them to be set from update_data.
+                pass
+
             if key in ['sentiment_level', 'sleep_quality', 'stress_level', 'social_engagement'] and value is not None:
-                 setattr(db_entry, key, value.value)
+                setattr(db_entry, key, value.value)
+            elif key == 'keywords' and value is not None: # Handle keywords list
+                setattr(db_entry, key, json.dumps(value))
+            # Add similar handling if 'activities' were to be updated via this mechanism
+            # elif key == 'activities' and value is not None:
+            #     setattr(db_entry, key, json.dumps(value))
             else:
-                 setattr(db_entry, key, value)
+                setattr(db_entry, key, value) # This will handle formatted_content (string) correctly
 
-
-        # Update the updated_at timestamp
         db_entry.updated_at = datetime.utcnow()
-
         db.commit()
         db.refresh(db_entry)
     return db_entry
@@ -91,33 +97,6 @@ def delete_journal_entry(db: Session, entry_id: int) -> bool:
         return True
     return False
 
-# Keep the update_entry_analysis function as is
-def update_entry_analysis(
-    db: Session,
-    entry_id: int,
-    formatted_content: Optional[str] = None,
-    activities: Optional[List[str]] = None,
-    sentiment_analysis: Optional[str] = None,
-    keywords: Optional[List[str]] = None
-) -> Optional[JournalEntryModel]:
-    """Update AI analysis fields for a journal entry"""
-    db_entry = get_journal_entry(db, entry_id)
-    if db_entry:
-        if formatted_content is not None:
-            db_entry.formatted_content = formatted_content
-
-        if activities is not None:
-            db_entry.activities = json.dumps(activities)
-
-        if sentiment_analysis is not None:
-            db_entry.sentiment_analysis = sentiment_analysis
-
-        if keywords is not None:
-            db_entry.keywords = json.dumps(keywords)
-
-        db.commit()
-        db.refresh(db_entry)
-    return db_entry
 
 
 # --- Goal CRUD (New functions, updated for priority and optional date) ---

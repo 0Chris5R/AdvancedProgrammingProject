@@ -1,19 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import EntryList from '../journal/EntryList';
-import EntryForm from '../journal/EntryForm';
-import EntryDetail from '../journal/EntryDetail'; // Import the new detail component
-import Modal from '../common/Modal'; // Assuming you have a Modal component
-import { Search as SearchIcon, Calendar as CalendarIcon } from 'lucide-react';
-// Import API functions
+import EntryList from '../journal/EntryList'; // Adjusted path
+import EntryForm from '../journal/EntryForm'; // Adjusted path
+import EntryDetail from '../journal/EntryDetail'; // Adjusted path
+import Modal from '../common/Modal'; // Assuming Modal is in components/common
+import { Search as SearchIcon, Calendar as CalendarIcon } from 'lucide-react'; // Import icons, renamed Calendar for clarity
+
+// Import API functions and react-query hooks
 import {
     fetchJournalEntries,
     createJournalEntry,
     updateJournalEntry,
     deleteJournalEntry
 } from '../../api/api';
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-
 
 
 const JournalPage = () => {
@@ -27,7 +26,7 @@ const JournalPage = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  // State for local error handling (for mutations) - Corrected destructuring
+  // State for local error handling (for mutations)
   const [error, setError] = useState(null);
 
 
@@ -38,7 +37,7 @@ const JournalPage = () => {
   const { data: allEntries, isLoading, isError, error: fetchError } = useQuery({ // Renamed error from useQuery to fetchError
       queryKey: ['journalEntries'], // Unique key for this query
       queryFn: fetchJournalEntries, // Function to fetch data
-      staleTime: 5 * 60 * 1000, // Data is considered fresh for 5 minutes
+      staleTime: 5 * 60 * 1000, // Data is considered fresh for 5 minutes (5 minutes)
       // initialData: [] // Optional: provide initial data if available
   });
 
@@ -171,6 +170,7 @@ const JournalPage = () => {
           setError(null); // Clear previous local errors before mutation
           // Delete entry using mutation
           deleteEntryMutation.mutate(entryId);
+          closeDetailModal(); // Close detail modal after deleting from detail view
       }
   };
 
@@ -187,6 +187,7 @@ const JournalPage = () => {
   const openEditEntryModal = (entry) => {
     setEditingEntry(entry);
     setShowEntryFormModal(true);
+    closeDetailModal(); // Close detail modal when opening edit form from detail
   };
 
   // Handler for selecting an entry to view details
@@ -273,22 +274,6 @@ const JournalPage = () => {
                   />
               </div>
           </div>
-
-          {/* Mood Rating (Placeholder) - Removed as per request */}
-          {/*
-          <div>
-               <label htmlFor="moodRating" className="block text-sm font-medium text-gray-700 mb-1">Mood Rating</label>
-               <select
-                   id="moodRating"
-                   name="moodRating"
-                   className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
-                   // Add value and onChange handlers
-               >
-                    <option value="">Any rating</option>
-                    {/* Add options based on your mood scale (e.g., 1-5) }
-               </select>
-          </div>
-          */}
       </div>
 
 
@@ -326,6 +311,8 @@ const JournalPage = () => {
                <EntryDetail
                    entry={selectedEntry} // Pass the selected entry
                    onClose={closeDetailModal} // Pass the close handler
+                   onEdit={openEditEntryModal} // Pass the edit handler to EntryDetail
+                   onDelete={handleDeleteEntry} // Pass the delete handler to EntryDetail
                />
            </Modal>
        )}
@@ -334,4 +321,3 @@ const JournalPage = () => {
 };
 
 export default JournalPage;
-
