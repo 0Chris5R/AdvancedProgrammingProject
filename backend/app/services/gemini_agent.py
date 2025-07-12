@@ -315,3 +315,40 @@ def analyze_entry(content: str, goals: str) -> tuple:
         f3 = executor.submit(extract_sentiments, content, 5)
         f4 = executor.submit(extract_goals, content, goals)
         return f1.result(), f2.result(), f3.result(), f4.result()
+
+
+def generate_insights(stats: dict, weekly_data: list, correlation_data: list) -> List[str]:
+    """Generate personalized insights based on user's analytics data."""
+    prompt = f"""You are an AI assistant that provides personalized insights based on a user's journal analytics.
+
+Here is the user's data:
+- **Basic Stats:** {stats}
+- **Weekly Activity:** {weekly_data}
+- **Sleep vs. Happiness Correlation:** {correlation_data}
+
+Your task is to generate 3-5 concise, actionable, and encouraging insights based on this data.
+
+**Key Instructions:**
+- **Be Specific:** Refer to specific numbers and trends from the data.
+- **Focus on Actionable Advice:** Suggest small, manageable changes.
+- **Maintain a Positive and Supportive Tone:** Frame insights as opportunities for growth.
+- **Vary the Insights:** Cover different areas like mood, productivity, sleep, and stress.
+
+**Example Insights:**
+- "Your mood is 40% higher on days when you get more than 8 hours of sleep. Prioritizing a consistent bedtime could be a great way to boost your happiness."
+- "You wrote the most on Saturday, with 4 entries and 820 words. It seems weekends are a great time for you to reflect."
+- "Your stress levels tend to be highest on Thursdays. Maybe a short walk or a few minutes of mindfulness could help on that day."
+
+**Important:**
+- Return ONLY a list of 3-5 insight strings in a JSON-compatible format.
+- Do not add any extra commentary or introductory text.
+"""
+    response = genai_client.models.generate_content(
+        model=model,
+        contents=prompt,
+        config={
+            "response_mime_type": "application/json",
+            "response_schema": ActivityList,  # Re-using ActivityList for a list of strings
+        },
+    )
+    return [item.value for item in response.parsed.activities]

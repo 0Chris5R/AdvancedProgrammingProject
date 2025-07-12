@@ -123,6 +123,11 @@ export const enhanceGoalDescription = async (title, description) => {
   return handleResponse(response);
 };
 
+export const fetchAnalyticsData = async (period) => {
+  const response = await fetch(`${API_BASE_URL}/analytics/?period=${period}`);
+  return handleResponse(response);
+};
+
 export const createGoal = async (goalData) => {
   const response = await fetch(`${API_BASE_URL}/goals/`, {
     method: "POST",

@@ -1,8 +1,14 @@
+from .db.database import create_tables
+from .routes import journal, goal, chatbot, analytics
+from fastapi.middleware.cors import CORSMiddleware
+import sys
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from .routes import journal, goal, chatbot, analytics
-from .db.database import create_tables
+
+# Add the project root to the Python path
+sys.path.insert(0, os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '..')))
 
 
 @asynccontextmanager

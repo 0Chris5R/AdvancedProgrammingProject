@@ -16,3 +16,9 @@ General:
 - Possibility to include attachments to journals
 - User Management
 - Daily reminder to write journal entry
+
+
+
+- to do: 
+
+Clean files, update readme files, check if package.json and requirements.txt are up to date 
